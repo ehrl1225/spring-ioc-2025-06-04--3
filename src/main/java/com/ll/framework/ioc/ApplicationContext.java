@@ -44,18 +44,16 @@ public class ApplicationContext {
                 Parameter[] parameters = method.getParameters();
                 List<Object> values = new ArrayList<>();
                 for (Parameter parameter : parameters) {
-                    Class<?> type = parameter.getType();
-                    if (!hasBean(type)) {
-                        getBeans(type);
+                    String parameterName = parameter.getName();
+                    if (!hasBean(parameterName)) {
+                        getBeans(parameterName);
                     }
-                    values.add(getBean(type));
+                    values.add(getBean(parameterName));
                 }
                 try{
                     Object returnValue = method.invoke(self,values.toArray());
-                    Class<?> returnType = method.getReturnType();
                     String methodName = method.getName();
                     putBean(methodName, returnValue);
-                    putBean(returnType, returnValue);
 
                 }catch (Exception e){
                     System.out.println(e);
@@ -71,9 +69,9 @@ public class ApplicationContext {
      * 메소드를 실행하는 코드
      * 매개변수가 필요한데 해당 객체가 없으면 재귀로 작동함
      * Bean 어노테이션을 한 메소드에게서 필요한 Bean의 값을 얻을 수 있다면 그 메소드를 실행시킴
-     * @param type
+     * @param
      */
-    private void getBeans( Class<?> type) {
+    private void getBeans( String name) {
         try{
             List<Class<?>> classes = getClassesHasAnnotatedMethods(Bean.class);
             classes.forEach(this::makeBean);
@@ -81,24 +79,22 @@ public class ApplicationContext {
                 Object self = getBean(clazz);
                 Method[] methods = clazz.getDeclaredMethods();
                 for (Method method : methods) {
-                    Class<?> methodType = method.getReturnType();
-                    if (type != methodType) {
-                        continue;
-                    }
                     Parameter[] parameters = method.getParameters();
                     List<Object> values = new ArrayList<>();
+                    if (!method.getName().equals(name)){
+                        continue;
+                    }
                     for (Parameter parameter : parameters) {
                         Class<?> parameterType = parameter.getType();
-                        if (!hasBean(parameterType)) {
-                            getBeans(parameterType);
+                        String parameterName = parameter.getName();
+                        if (!hasBean(parameterName)) {
+                            getBeans(parameterName);
                         }
                         values.add(getBean(parameterType));
                     }
                     Object returnValue = method.invoke(self, values.toArray());
-                    Class<?> returnType = method.getReturnType();
                     String methodName = method.getName();
                     putBean(methodName, returnValue);
-                    putBean(returnType, returnValue);
                 }
             }
         } catch (Exception e){
@@ -162,6 +158,9 @@ public class ApplicationContext {
     private Object getBean(Class<?> clazz) {
         return beans.get(Ut.str.lcfirst(clazz.getSimpleName()));
     }
+    private Object getBean(String beanName) {
+        return beans.get(beanName);
+    }
 
     public <T> T genBean(String beanName) {
         return (T) beans.get(beanName);
@@ -169,6 +168,10 @@ public class ApplicationContext {
 
     private boolean hasBean(Class<?> clazz) {
         return beans.containsKey(Ut.str.lcfirst(clazz.getSimpleName()));
+    }
+
+    private boolean hasBean(String beanName) {
+        return beans.containsKey(beanName);
     }
 
     private void addComponents() {
